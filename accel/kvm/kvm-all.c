@@ -2400,6 +2400,7 @@ static int kvm_init(MachineState *ms)
         { /* end of list */ }
     }, *nc = num_cpus;
     int soft_vcpus_limit, hard_vcpus_limit;
+    //[maxing COMMENT]: qemu使用KVMState来表示KVM相关的数据结构
     KVMState *s;
     const KVMCapabilityInfo *missing_cap;
     int ret;
@@ -2425,6 +2426,7 @@ static int kvm_init(MachineState *ms)
     QTAILQ_INIT(&s->kvm_sw_breakpoints);
 #endif
     QLIST_INIT(&s->kvm_parked_vcpus);
+    //[maxing COMMENT]: 首先打开"/dev/kvm"设备得到一个fd，保存到类型为KVMState的变量s的成员fd中
     s->fd = qemu_open_old(s->device ?: "/dev/kvm", O_RDWR);
     if (s->fd == -1) {
         fprintf(stderr, "Could not access KVM kernel module: %m\n");
@@ -2432,6 +2434,7 @@ static int kvm_init(MachineState *ms)
         goto err;
     }
 
+    //[maxing COMMENT]: 检查kvm版本
     ret = kvm_ioctl(s, KVM_GET_API_VERSION, 0);
     if (ret < KVM_API_VERSION) {
         if (ret >= 0) {
@@ -2453,6 +2456,7 @@ static int kvm_init(MachineState *ms)
         kvm_check_extension(s, KVM_CAP_USER_MEMORY2) &&
         (kvm_supported_memory_attributes & KVM_MEMORY_ATTRIBUTE_PRIVATE);
 
+    //[maxing COMMENT]: 检查是否支持kvm的一些扩展属性
     kvm_immediate_exit = kvm_check_extension(s, KVM_CAP_IMMEDIATE_EXIT);
     s->nr_slots = kvm_check_extension(s, KVM_CAP_NR_MEMSLOTS);
 
@@ -2483,6 +2487,7 @@ static int kvm_init(MachineState *ms)
         goto err;
     }
 
+    //[maxing COMMENT]: 调用ioctl(KVM_CREATE_VM)接口在kvm层面创建一个虚拟机
     do {
         ret = kvm_ioctl(s, KVM_CREATE_VM, type);
     } while (ret == -EINTR);
@@ -2630,8 +2635,10 @@ static int kvm_init(MachineState *ms)
 #endif
     }
 
+    //[maxing COMMENT]: 将s赋值到一个全局变量kvm_state，这样其他地方可以引用他
     kvm_state = s;
 
+    //[maxing COMMENT]: 调用kvm_arch_init完成一些架构的初始化，对于x86，需要调用KVM_CAP_SET_IDENTITY_MAP_ADDR和KVM_SET_TSS_ADDR等ioctl来支持vm86模式
     ret = kvm_arch_init(ms, s);
     if (ret < 0) {
         goto err;
