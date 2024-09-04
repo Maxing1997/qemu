@@ -30,6 +30,8 @@
 #include "qemu/error-report.h"
 #include "accel-system.h"
 
+//[maxing COMMENT]: 对于kvm来说，这个accel本质上是一个KVMState，
+//调用acc对应的init_machine回调函数，对于kvm来说是kvm_init。这个回调函数是在TYPE_KVM_ACCEL类的初始化函数kvm_accel_class_init中设置的。
 int accel_init_machine(AccelState *accel, MachineState *ms)
 {
     AccelClass *acc = ACCEL_GET_CLASS(accel);

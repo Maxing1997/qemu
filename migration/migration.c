@@ -3811,6 +3811,7 @@ void migrate_fd_connect(MigrationState *s, Error *error_in)
         }
     }
 
+    //[maxing COMMENT]: 会创建热迁移线程
     if (migrate_background_snapshot()) {
         qemu_thread_create(&s->thread, "mig/snapshot",
                 bg_migration_thread, s, QEMU_THREAD_JOINABLE);

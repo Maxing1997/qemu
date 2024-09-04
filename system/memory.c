@@ -1114,6 +1114,9 @@ void memory_region_transaction_begin(void)
     ++memory_region_transaction_depth;
 }
 
+//[maxing COMMENT]: 下面分析什么时候需要更新内存。
+//进行内存更新的时候有很多节点，比如新创建一个AddressSpace时，调用memory_region_add_subregion将一个MemoryRegion添加到另一个MemoryRegion的subregions中时，以及调用memory_region_set_readonly更改一段内存属性、利用memory_region_set_enabled将一个MemoryRegion设置为使能或者非使能时，总之一句话，当修改了虚拟机的内存布局或者属性时，就需要通知到各个listener，这个过程叫做commit，由memory_region_transaction_commits实现。
+//对于内存更新来说，memory_region_update_pending会被设置为true，memory_region_transaction_commit完成三项工作。首先通过MEMORY_LISTENER_CALL_GLOBAL调用每个memory listener的begin函数，这个时候各个memory listener可以在begin函数中做一些初始化的工作。接着对每个address_spaces链表上的每个AddressSpace调用address_space_set_flatview+address_space_update_ioeventfds，用来更新AddressSpace的内存时图，这个过程可能会涉及memory listener的添加删除等回调函数。最后通过MEMORY_LISTENER_CALL_GLOBAL对全局链表memory_listeners上的每一个注册的MemoryListener调用commit回调函数。通过这3个步骤就完成了将内存布局更新通知给所有memory listener的操作了。
 void memory_region_transaction_commit(void)
 {
     AddressSpace *as;
@@ -1533,6 +1536,8 @@ MemTxResult memory_region_dispatch_write(MemoryRegion *mr,
     }
 }
 
+//[maxing COMMENT]: 虚拟设备初始化的时候调用memory_region_init_io创建一个MMIO区域。
+//可以看到mr->ram并没有设置，并且该函数的调用链也没有任何分配内存的行为，仅仅是初始化了一个MemoryRegion
 void memory_region_init_io(MemoryRegion *mr,
                            Object *owner,
                            const MemoryRegionOps *ops,
@@ -3077,6 +3082,8 @@ static void listener_del_address_space(MemoryListener *listener,
     flatview_unref(view);
 }
 
+//[maxing COMMENT]: 注册MemoryListener
+//该函数将listener注册到as地址空间中，当as地址空间拓扑发生变化时就会调用其链表上的所有listener，调用相关回调函数。
 void memory_listener_register(MemoryListener *listener, AddressSpace *as)
 {
     MemoryListener *other = NULL;

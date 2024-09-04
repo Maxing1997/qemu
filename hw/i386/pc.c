@@ -812,6 +812,7 @@ static hwaddr pc_max_used_gpa(PCMachineState *pcms, uint64_t pci_hole64_size)
 #define AMD_ABOVE_1TB_START  (AMD_HT_END + 1)
 #define AMD_HT_SIZE          (AMD_ABOVE_1TB_START - AMD_HT_START)
 
+//[maxing COMMENT]: pc_memory_init函数主要用于分配虚拟机的物理内存以及初始化想要的MemoryRegion和ROM，并且将相应数据添加到fw_cfg设备中。
 void pc_memory_init(PCMachineState *pcms,
                     MemoryRegion *system_memory,
                     MemoryRegion *rom_memory,
@@ -872,11 +873,15 @@ void pc_memory_init(PCMachineState *pcms,
      * Split single memory region and use aliases to address portions of it,
      * done for backwards compatibility with older qemus.
      */
+    //[maxing COMMENT]:创建ram_below_4g,表示内存中小于4G的部分
     ram_below_4g = g_malloc(sizeof(*ram_below_4g));
     memory_region_init_alias(ram_below_4g, NULL, "ram-below-4g", machine->ram,
                              0, x86ms->below_4g_mem_size);
+    //[maxing COMMENT]:  将其设置为pc.ram的子region
     memory_region_add_subregion(system_memory, 0, ram_below_4g);
+    //[maxing COMMENT]: 将小于4G的内存加入到/etc/e820表中供BIOS使用
     e820_add_entry(0, x86ms->below_4g_mem_size, E820_RAM);
+    //[maxing COMMENT]: 大于4G建立多一个region
     if (x86ms->above_4g_mem_size > 0) {
         ram_above_4g = g_malloc(sizeof(*ram_above_4g));
         memory_region_init_alias(ram_above_4g, NULL, "ram-above-4g",
@@ -958,8 +963,10 @@ void pc_memory_init(PCMachineState *pcms,
     }
 
     /* Initialize PC system firmware */
+    //[maxing COMMENT]: 进行固件的初始化
     pc_system_firmware_init(pcms, rom_memory);
 
+    //[maxing COMMENT]: 创建rom的MemoryRegion，并且将其加入到rom_memory的子region中。
     option_rom_mr = g_malloc(sizeof(*option_rom_mr));
     if (machine_require_guest_memfd(machine)) {
         memory_region_init_ram_guest_memfd(option_rom_mr, NULL, "pc.rom",
@@ -976,9 +983,11 @@ void pc_memory_init(PCMachineState *pcms,
                                         option_rom_mr,
                                         1);
 
+    //[maxing COMMENT]: 创建fw_cfg设备，
     fw_cfg = fw_cfg_arch_create(machine,
                                 x86ms->boot_cpus, x86ms->apic_id_limit);
 
+    //[maxing COMMENT]: 调用rom_set_fw将fw_cfg设备复制到全局变量fw_cfg中
     rom_set_fw(fw_cfg);
 
     if (machine->device_memory) {
@@ -996,13 +1005,17 @@ void pc_memory_init(PCMachineState *pcms,
         fw_cfg_add_file(fw_cfg, "etc/reserved-memory-end", val, sizeof(*val));
     }
 
+    //[maxing COMMENT]: QEMU也可以通过-kernel来启动Linux，这样的话会调用x86_load_linux，
+    //该函数的主要作用就是读取-kernel指定的文件，然后添加到fw_cfg设备中
     if (linux_boot) {
         x86_load_linux(x86ms, fw_cfg, PC_FW_DATA, pcmc->pvh_enabled);
     }
 
+    //[maxing COMMENT]: 调用rom_add_option添加其他的ROM
     for (i = 0; i < nb_option_roms; i++) {
         rom_add_option(option_rom[i].name, option_rom[i].bootindex);
     }
+    //[maxing COMMENT]: 最后设置PCMachineState的fw_cfg和ioapic_as为系统全局的address_space_memory
     x86ms->fw_cfg = fw_cfg;
 
     /* Init default IOAPIC address space */

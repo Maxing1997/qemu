@@ -821,6 +821,8 @@ struct IOMMUMemoryRegion {
  * Allows a component to adjust to changes in the guest-visible memory map.
  * Use with memory_listener_register() and memory_listener_unregister().
  */
+//[maxing COMMENT]: MemoryListener中有大量的回调函数，这些回调函数会在虚拟机内存拓扑更改的时候被调用，所有对内存更改感兴趣的模块都可以注册自己的MemoryListener。
+//log_xxx跟脏页机制的开启和同步有关系。
 struct MemoryListener {
     /**
      * @begin:
@@ -845,6 +847,7 @@ struct MemoryListener {
      *
      * @listener: The #MemoryListener.
      */
+    //[maxing COMMENT]: 执行内存变更
     void (*commit)(MemoryListener *listener);
 
     /**
@@ -857,6 +860,7 @@ struct MemoryListener {
      * @listener: The #MemoryListener.
      * @section: The new #MemoryRegionSection.
      */
+    //[maxing COMMENT]: 添加region
     void (*region_add)(MemoryListener *listener, MemoryRegionSection *section);
 
     /**
@@ -1074,7 +1078,10 @@ struct MemoryListener {
     const char *name;
 
     /* private: */
+    //[maxing COMMENT]: 监听器对应的地址空间
     AddressSpace *address_space;
+    //[maxing COMMENT]: link用来将各个MemoryListener连接起来，它们连接到一个全局变量memory_listeners上，
+    //同一个地址地址空间的MemoryListener通过link_as（as是address space的缩写）连接起来，
     QTAILQ_ENTRY(MemoryListener) link;
     QTAILQ_ENTRY(MemoryListener) link_as;
 };

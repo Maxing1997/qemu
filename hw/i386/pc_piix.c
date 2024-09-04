@@ -100,6 +100,7 @@ static void piix_intx_routing_notifier_xen(PCIDevice *dev)
 }
 
 /* PC hardware initialisation */
+//[maxing COMMENT]: pc_init1调用pc_memory_init函数进行内存初始化
 static void pc_init1(MachineState *machine, const char *pci_type)
 {
     PCMachineState *pcms = PC_MACHINE(machine);
@@ -189,6 +190,7 @@ static void pc_init1(MachineState *machine, const char *pci_type)
 
     if (pcmc->pci_enabled) {
         pci_memory = g_new(MemoryRegion, 1);
+	//[maxing COMMENT]: pc_init1中会创建一个PCI地址空间pci_memory，表示ROM的地址空间和PCI的地址空间是同一个MemoryRegion
         memory_region_init(pci_memory, NULL, "pci", UINT64_MAX);
         rom_memory = pci_memory;
 

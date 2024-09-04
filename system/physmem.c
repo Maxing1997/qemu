@@ -2638,6 +2638,8 @@ static void tcg_commit(MemoryListener *listener)
     }
 }
 
+//[maxing COMMENT]: 这里面创建两个AddressSpace：address_space_memory和address_space_io，分别用来表示虚拟机的内存地址空间和IO地址空间，其对应根MemoryRegion分别是system_memory和system_io。
+//这两个AdressSpace和对应的根MemoryRegion均为全局变量，在系统中会被很多地方使用。
 static void memory_map_init(void)
 {
     system_memory = g_malloc(sizeof(*system_memory));
@@ -3127,6 +3129,8 @@ void address_space_register_map_client(AddressSpace *as, QEMUBH *bh)
     }
 }
 
+//[maxing COMMENT]: main函数中会调用cpu_exec_init_all进行一些初始化工作，其中两个函数的调用与内存相关，即io_mem_init和memory_map_init。
+//第一个函数比较简单，就是创建若干个包含所有地址空间的MemoryRegion，如io_mem_rom和io_mem_unassigned。第二个函数memory_map_init则是一个重要函数。
 void cpu_exec_init_all(void)
 {
     qemu_mutex_init(&ram_list.mutex);

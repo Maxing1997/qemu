@@ -281,6 +281,9 @@ int kvm_physical_memory_addr_from_host(KVMState *s, void *ram,
     return ret;
 }
 
+//[maxing COMMENT]: kvm_set_user_memory_region将QEMU表示内存槽的KVMSlot转换成KVM表示内存槽的kvm_userspace_memory_region结构，其中最重要的两个设置是：
+//（1）mem.guest_phys_addr = slot->start_addr; 表示的是虚拟机的物理地址；（2） mem.userspace_addr = (unsigned long)slot->ram; 表示的是虚拟对应的QEMU进程的虚拟地址。
+//这样设置以后，虚拟机对物理地址的访问其实就是对QEMU这里虚拟地址的访问。最后调用虚拟机所属的ioctl(KVM_SET_USER_MEMORY_REGION)来设置虚拟机的物理地址与QEMU虚拟地址的映射关系。
 static int kvm_set_user_memory_region(KVMMemoryListener *kml, KVMSlot *slot, bool new)
 {
     KVMState *s = kvm_state;
@@ -371,6 +374,7 @@ int kvm_unpark_vcpu(KVMState *s, unsigned long vcpu_id)
     return kvm_fd;
 }
 
+//[maxing COMMENT]: 首先调用kvm_create_vcpu，初始化时该函数在虚拟机的fd上调用ioctl(KVM_CREATE_VCPU)，这样kvm层面就会创建出一个vcpu，其返回值就代表了该vcpu的fd。
 int kvm_create_vcpu(CPUState *cpu)
 {
     unsigned long vcpu_id = kvm_arch_vcpu_id(cpu);
@@ -456,6 +460,7 @@ void kvm_destroy_vcpu(CPUState *cpu)
     }
 }
 
+//[maxing COMMENT]: 创建kvm层面的vcpu
 int kvm_init_vcpu(CPUState *cpu, Error **errp)
 {
     KVMState *s = kvm_state;
@@ -472,6 +477,7 @@ int kvm_init_vcpu(CPUState *cpu, Error **errp)
         goto err;
     }
 
+    //[maxing COMMENT]: 接着在"/dev/kvm"设备的fd上调用ioctl(KVM_GET_VCPU_MMAP_SIZE)，该接口返回kvm和qemu共享内存空间的大小。
     mmap_size = kvm_ioctl(s, KVM_GET_VCPU_MMAP_SIZE, 0);
     if (mmap_size < 0) {
         ret = mmap_size;
@@ -480,6 +486,7 @@ int kvm_init_vcpu(CPUState *cpu, Error **errp)
         goto err;
     }
 
+    //[maxing COMMENT]: 在得到共享内存的大小之后，在vcpu的fd上调用mmap，
     cpu->kvm_run = mmap(NULL, mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED,
                         cpu->kvm_fd, 0);
     if (cpu->kvm_run == MAP_FAILED) {
@@ -1370,6 +1377,8 @@ int kvm_set_memory_attributes_shared(hwaddr start, uint64_t size)
 }
 
 /* Called with KVMMemoryListener.slots_lock held */
+//[maxing COMMENT]: kvm_set_phys_mem中的start_addr为该MemoryRegionSection在AddressSpace中的起始地址，对address_space_memory而言，其表示的就是虚拟机的物理地址，size表示其大小，ram为该MemoryRegionSection在虚拟机内存中对应的QEMU虚拟地址空间的虚拟地址。
+//通过size、start_addr、ram等构造一个类型为KVMSlot的mem变量，然后调用kvm_set_user_memory_region完成最终的设置
 static void kvm_set_phys_mem(KVMMemoryListener *kml,
                              MemoryRegionSection *section, bool add)
 {
@@ -1834,6 +1843,9 @@ static void kvm_io_ioeventfd_del(MemoryListener *listener,
     }
 }
 
+//[maxing COMMENT]: 接下来分析KVM注册的MemoryListener
+//分配s->nr_slots个KVMSlot结构，该结构表示的是KVM内存槽，也就是对于KVM来说，虚拟机有多少段内存，该值是在kvm_init中通过KVM_CAP_NR_MEMSLOTS这个KVM设备所属的ioctl得到的。
+//接着初始化kml的listener回调函数。
 void kvm_memory_listener_register(KVMState *s, KVMMemoryListener *kml,
                                   AddressSpace *as, int as_id, const char *name)
 {
@@ -2659,6 +2671,7 @@ static int kvm_init(MachineState *ms)
     s->memory_listener.listener.coalesced_io_add = kvm_coalesce_mmio_region;
     s->memory_listener.listener.coalesced_io_del = kvm_uncoalesce_mmio_region;
 
+    //[maxing COMMENT]: 在kvm_init中，调用了kvm_memory_listener_register。
     kvm_memory_listener_register(s, &s->memory_listener,
                                  &address_space_memory, 0, "kvm-memory");
     memory_listener_register(&kvm_io_listener,
